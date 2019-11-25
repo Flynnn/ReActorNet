@@ -29,7 +29,7 @@ Claims here are plans being portrayed as reality. Nothing here is implemented ye
 
 
 ## Documentation
-Curious how it all works? Please visit the [docs subdirectory.](/docs)
+Curious how it all works? Please visit the [docs subdirectory.](/doc)
 
 ## Source
 
