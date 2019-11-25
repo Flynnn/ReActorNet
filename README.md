@@ -15,8 +15,8 @@ Claims here are plans being portrayed as reality. Nothing here is implemented ye
 ## Key features:
 
 * Interfaceable with any networking library with sufficient features.
-..* Currently only Photon Supported.
-..* Photon Wrapper is very lightweight. Uses RaiseEvent to acheive lower-overhead than Photon's builtin Object Synchronization and RPC protocols.
+  * Currently only Photon Supported.
+  * Photon Wrapper is very lightweight. Uses RaiseEvent to acheive lower-overhead than Photon's builtin Object Synchronization and RPC protocols.
 * Event-Hook style networking, as opposed to UNet/Photon/RakNet/Unity3d classic broadcast-implement style. This is against Unity3D conventions, but in my opinion leads to cleaner code.
 * Based on pure C# actor objects rather than UnityObject networkView components.
 * Actor and Message table comparison and resynchronization combined with message buffering during host transfer and connect/disconnect, leading to hopefully very reliable behavior in the most challenging of connection/host transfer scenarios
