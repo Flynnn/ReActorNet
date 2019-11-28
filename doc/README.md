@@ -56,10 +56,32 @@ ReActorNet can be broken down into several layers. The root layer is the Session
 
 Sessions, thus, contain multiple Clients. Each Client is an instance of your game.
 
-Each Client can contain multiple Network Players. Typically, there is one Network Player per client, but if a developer desires, they may implement bots as additional NetworkPlayers. The current Host client also has a special Host Network Player that (typically) owns only headless Actors whose job it is to handle Host powers and Host responsibilities. This includes scorekeeping, win-state detection, management of room settings, etc. 
+Each Client can contain multiple Network Players. Typically, there is one Network Player per client, however a developer may implement bots in the form of Bot NetworkPlayers, and there is a special type of NetworkPlayer known as the Host NetworkPlayer that the current host Client always owns.
 
-The Host NetworkPlayer is treated differently to other NetworkPlayers by ReActorNet, in that it is transferred automatically during host transfer. This differs greatly from traditional actor-room-based frameworks, where actors will typically just check if they are currently owned by a host client.
+Bot NetworkPlayers, Host NetworkPlayers, and normal NetworkPlayers are identical except for their behavior when their owning client disconnects. When the owner of a Host NetworkPlayer disconnects, the NetworkPlayers is automatically transferred to the new host client. When the owner of a Bot NetworkPlayer disconnects, the Bot NetworkPlayer is automatically transferred to whichever client currently owns the least number of bots. When the owner of a normal disconnects NetworkPlayer, the NetworkPlayer is not transferred.
 
-All NetworkPlayers contain a UUID that is used to address them and keep them synchronized across network. Users of ReActorNet may raise events directly on NetPlayers.
+The Host NetworkPlayer exists to own and preserve special actors responsible for tasks such as scorekeeping, win-state detection, management of room settings, etc. For example, the classic "GameManager" PhotonView found in many multiplayer games.
 
-All NetworkPlayers contain a special dictionary of data known as Non-Transient State
+A NetworkPlayer may at any point request to transfer its ownership to a new client, or the ownership of any of its actors to any other NetworkPlayer.
+
+All NetworkPlayers, and all of their actors, contain a UUID that is used to address them and keep them synchronized across network. Users of ReActorNet may raise events directly on NetPlayers or on Actors.
+
+All NetworkPlayers, and all of their actors, contain a special dictionary of data known as Non-Transient State. This state is automatically synchronized across all clients, and is cross-referenced during NetworkPlayer ownership transfers.
+
+# Transfer & Connection Procedures
+
+## Client Join Procedure
+
+## Client Request Network Player Procedure
+
+## NetworkPlayer Transfer Procedure
+
+# Synchronization Paths
+
+## Non-Transient State
+
+## Transient State
+
+## Reliable Messages
+
+## Transient Messages
