@@ -68,6 +68,47 @@ All NetworkPlayers, and all of their actors, contain a UUID that is used to addr
 
 All NetworkPlayers, and all of their actors, contain a special dictionary of data known as Non-Transient State. This state is automatically synchronized across all clients, and is cross-referenced during NetworkPlayer ownership transfers.
 
+# Synchronization Pathways
+
+There are four distinct methods for NetworkPlayers and actors to communicate. They are as follows:
+
+## Non-Transient State
+
+I have already mentioned this communication pathway. All NetworkPlayers and Actors contain a string-indexed, anonymous-typed dictionary that any client can modify. Changes to this dictionary are buffered and sent en masse at a regular rate, every 0.1S by default. Please note that if two actors modify the same register within a short amount of time, these modifications may be execute in the wrong order on different clients. Either follow very strict property ownership, or perform only commutative operations (namely addition and multiplication for numeric types, or inversion for boolean types).
+
+## Transient State
+
+Transient state synchronization is a very special feature of ReActorNet. This is very similar to typical object synchronization, such as that found in Photon's OnPhotonSerializeView(), except for one very key feature: **ReActorNet actors have the ability to transmit state updates at different rates to different clients, saving massively on bandwidth in rooms with large numbers of players**
+
+Each NetworkPlayer has, associated with it, a list of actors that I refer to as an Interest Group. Actors will send their synchronization data more often to NetworkPlayers whose interest groups they are a part of, while sending their data less often to NetworkPlayers whose groups they are not a part of.
+
+This is accomplished via a process called "empathetic load balancing." In fact, these interest groups are never transmitted, but are calculated locally at the beginning of every frame by every client. You will be required to write a small class that handles empathetic load balancing in such a way that (roughly) the same results are arrived at by all clients for all of the interest groups.
+
+As an example, a simple procedure might be to put actors that are within a certain distance of a given NetworkPlayer's main character actor on that NetworkPlayer's interest group. There may be brief incongruence between the results each client arrives at for a particular NetworkPlayer's interest group during times when an actor is right on the edge of the threshold radius, for instance, but in general the results should be similar enough that total message transmission does not stray far from the budget.
+
+Once these interest groups are generated, ReActorNet will assign two data rates to each actor (the interested and disinterested data rates) based on the given transient state budgets, and a total transient state budget may be set.
+
+***EXACT METHOD FOR DETERMINING RATES TBD***
+
+The actor is then asked to produce status updates either for all interested parties, or for every one else. These requests for updates are made, and their results are sent, at the calculated interested and disinterested rates.
+
+## Reliable Messages
+
+Messages can be sent either as Reliable Messages, or Transient Messages.
+
+
+Reliable messages are always sent to all clients, and every NetworkPlayer keeps a list of all messages received. Whenever a NetworkPlayer's ownership is transferred, the message tables held by each client for the NetworkPlayer are compared against the message table of the receiving client, and any messages which the receiving client had not processed for that NetworkPlayer are marked for reprocessing by all other clients, after the non-transient state for those clients' copies of the NetworkPlayer and its actor are synchronized to the receiving NetworkPlayer's copy. Messages that ***have*** been processed by the time of the non-transient state transfer are marked as processed, even if other clients actually haven't processed them.
+
+To simplify, the general idea during an ownership transfer is to take whatever the perspective of the receiving client as the word of god, and make sure that all other clients reflect this perspective. So, we copy the non-transient state to all other clients, and then re-process any messages that weren't processed by the receiving client, and we make sure that other clients don't process any messages who were processed by the receiving client before the non-transient state transfer.
+
+The message tables will only go back a configurable amount of time (default: 10 seconds). Past this, messages are considered "fully sent," and special re-processing or process blocking is not necessary.
+
+## Transient Messages
+
+
+
+
+
 # Transfer & Connection Procedures
 
 ## Client Join Procedure
@@ -76,12 +117,3 @@ All NetworkPlayers, and all of their actors, contain a special dictionary of dat
 
 ## NetworkPlayer Transfer Procedure
 
-# Synchronization Paths
-
-## Non-Transient State
-
-## Transient State
-
-## Reliable Messages
-
-## Transient Messages
