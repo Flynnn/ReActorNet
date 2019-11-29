@@ -92,21 +92,47 @@ Once these interest groups are generated, ReActorNet will assign two data rates 
 
 The actor is then asked to produce status updates either for all interested parties, or for every one else. These requests for updates are made, and their results are sent, at the calculated interested and disinterested rates.
 
-## Reliable Messages
+## Reliable Events
 
-Messages can be sent either as Reliable Messages, or Transient Messages.
+I have mentioned that events can be raised on both NetworkPlayers and their Actors.
 
-
-Reliable messages are always sent to all clients, and every NetworkPlayer keeps a list of all messages received. Whenever a NetworkPlayer's ownership is transferred, the message tables held by each client for the NetworkPlayer are compared against the message table of the receiving client, and any messages which the receiving client had not processed for that NetworkPlayer are marked for reprocessing by all other clients, after the non-transient state for those clients' copies of the NetworkPlayer and its actor are synchronized to the receiving NetworkPlayer's copy. Messages that ***have*** been processed by the time of the non-transient state transfer are marked as processed, even if other clients actually haven't processed them.
-
-To simplify, the general idea during an ownership transfer is to take whatever the perspective of the receiving client as the word of god, and make sure that all other clients reflect this perspective. So, we copy the non-transient state to all other clients, and then re-process any messages that weren't processed by the receiving client, and we make sure that other clients don't process any messages who were processed by the receiving client before the non-transient state transfer.
-
-The message tables will only go back a configurable amount of time (default: 10 seconds). Past this, messages are considered "fully sent," and special re-processing or process blocking is not necessary.
-
-## Transient Messages
+These events can be one of three types: Reliable, Localized, or Simple
 
 
+Reliable events are always sent to all clients, and every NetworkPlayer keeps a list of all events received. Whenever a NetworkPlayer's ownership is transferred, the event tables held by each client for the NetworkPlayer are compared against the event table of the receiving client, and any events which the receiving client had not processed for that NetworkPlayer are marked for reprocessing by all other clients, after the non-transient state for those clients' copies of the NetworkPlayer and its actor are synchronized to the receiving NetworkPlayer's copy. events that ***have*** been processed by the time of the non-transient state transfer are marked as processed, even if other clients actually haven't processed them.
 
+To simplify, the general idea during an ownership transfer is to take whatever the perspective of the receiving client as the word of god, and make sure that all other clients reflect this perspective. So, we copy the non-transient state to all other clients, and then re-process any events that weren't processed by the receiving client, and we make sure that other clients don't process any events who were processed by the receiving client before the non-transient state transfer.
+
+The event tables will only go back a configurable amount of time (default: 10 seconds). Past this, events are considered "fully sent," and special re-processing or process blocking is not necessary.
+
+## Localized Events
+
+Localized events are a specialized event type that may or may not be received by a particular client depending on load balancing.
+
+Each NetworkPlayer is allocated a message budget which it may spend on transmitting localized events. Every second, a certain number of messages are added to the budget depending on the ReActorNet room's total localized message limits, and the current number of players. These message credits expire after 30 seconds.
+
+Each NetworkPlayer also has a maximum set on this message budget. If the budget is exceeded by a certain amount, the NetworkPlayer will consume two of its messages to donate said excess to the host NetworkPlayer.
+
+Each NetworkPlayer also has a begging threshold, under-which they will consume two messages to send a request for message budget donation directly to the host NetworkPlayer. If the host NetworkPlayer has spares donated to it, it may then consume two messages to donate the requested amount to the begging NetworkPlayer.
+
+This system allows relatively simple and low-overhead cooperative load-balancing of the localized event message budget for the entire room. 
+
+When raising a localized event, you must provide a dictionary mapping NetworkPlayers to floating point priorities. NetworkPlayer not mapped in the dictionary will never receive the event, along with a priority threshold.
+
+When the localized event is raised, its receiver NetworkPlayers will be sorted by priority (higher value indicates higher chance of receiving the event).
+
+The NetworkPlayer raising the event will then spend up to a certain (configurable) percentage of its current localized event message budget to send said localized event to as many of the target NetworkPlayers as possible.
+
+For instance, if the sending NetworkPlayer currently has a budget of 30 messages, and there are 7 target players, it will send immediately to all 7 target players, consuming 8 messages. If, instead, the sending NetworkPlayer only has a budget of 4 messages, then only the 3 highest-priority players will receive the event.
+
+If some of the target NetworkPlayers do not receive the event, then the event will be added to the localized event aggregate.
+
+Up to twice a second (configurable), if there are events in the localized event aggregate, they will be sorted according to the sum of the priorities of the NetworkPlayer targets that have not yet received the message, and bundled into messages of 1200 bytes (configurable) that are transmitted to ***all*** of the NetworkPlayer targets in the union of the remaining target lists of each individual bundled message. This will be repeated until either the localized message budget is depleted, or there are no more events in the aggregate.
+
+Events older than 10 seconds decay and are removed from the aggregate without being sent.
+
+## Simple Events
+Simple events are sent immediately and directly to their list of targets. No fancy load balancing or reliability during ownership transfer here. Use sparingly.
 
 
 # Transfer & Connection Procedures
