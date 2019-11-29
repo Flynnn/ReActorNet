@@ -137,9 +137,49 @@ Simple events are sent immediately and directly to their list of targets. No fan
 
 # Transfer & Connection Procedures
 
-## Client Join Procedure
+There are three fundamental processes that must be laid out here: Client Induction, Ownership Transfer, and NetworkPlayer Request.
+
+Both Client Induction and NetworkPlayer requests cause the game to enter a HALT state. This means that all NetworkPlayers will temporarily shut-down transient state updates, and will buffer all updates to non-transient state, as well as all raised events.
+
+If a client disconnects, this will trigger a Host Transfer if the client was the host client, or the client owned any bot NetworkPlayers.
+
+If a Host Transfer is triggered during Client Induction, the Client Induction will be reset, and the player being inducted will be reset. After the Host Transfer finishes, the Client Introduction will restart from scratch.
+
+The Host Client will only induct one client at a time. New clients joining must wait for previous clients to finish induction.
+
+If an Ownership Transfer is triggered during an Ownership Transfer, the original Ownership Transfer is cancelled, and a new Ownership Transfer is started to handle both transfers simultaneously. This may end up being only a single transfer if the second transfer is transferring the same NetworkPlayer as the original one was. (For instance, if the client being transferred to disconnects).
+
+
+## Client Induction
+![Example of Client Induction](TypicalConnect.svg)
+
+When a client connects, they must be inducted by the host client.
+
+First, the Host Client issues a HALT to all clients, which must be acknowledged. (Clients failing to acknowledge within 5 seconds are kicked.)
+
+Next, the Host Client sends a full copy of the actor registry and reliable message history to the inductee, which the inductee must acknowledge within 5 seconds or be kicked.
+
+Finally, in response to this acknowledgement, host will perform UNHALT.
+
+At any point during this process, the host Client may send a RESET signal, causing the inductee to reset to the beginning of the process, clearing out the actor registry, etcetera. Your game must be able to respond cleanly to this reset.
 
 ## Client Request Network Player Procedure
 
-## NetworkPlayer Transfer Procedure
+Once the UNHALT after induction is received, a "Client Joined" event will be triggered on the joining client. This client may now respond to said event by requesting a primary NetworkPlayer.
 
+This process is simple -- Once the request is received by the host Client, the host Client will allocate a NetworkPlayer, and notify all clients that this NetworkPlayer exists.
+
+## Ownership Transfer Procedure
+![Example of Client Induction](OwnershipTransfer.svg)
+
+In the event that the owner of an auto-transferring NetworkPlayer disconnects, or a client requests the transfer of any of its NetworkPlayers, an Ownership Transfer procedure will start. Ownership Transfer procedures may transfer the ownership of multipler NetworkPlayer's at once, and this feature is used to handle Ownership Transfers being triggered simultaneously.
+
+First, the current Host Client will issue a HALT to all clients. Failure to acknowledge the HALT results in a kick.
+
+Next, the Host Client will transmite a copy to all other Clients of its current knowlege of the actor registry and non-transient state for the NetworkPlayer whose ownership is being transfered, whether that be up to date or not. All other clients must accept this state as fact, and update their actor registries and non-transient state to match. All clients must send acknowledge after this is complete.
+
+Along with the actor registry and non-transient state, the Host Client will also send all of the reliable events that it is aware of that had been raised on the transferring NetworkPlayer.
+
+The other Clients will then compare this list against their own. They will mark any events not on the list for re-transmission, and they will mark any events not on their own list as "already processed" even if the event had not yet been received. 
+
+Each Client will send an acknowledgement of this process back to the Host Client. Upon receipt of all acknowledgements, the Host Client will execute UNHALT
