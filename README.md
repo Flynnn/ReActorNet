@@ -1,3 +1,9 @@
+Archived:
+
+After some thought, I decided to go with a simpler approach. The new project will be based on abstract records. Actor/Entity networking will be a layer on top of that.
+
+These concepts are helpful for the next stage, though : - )
+
 # ReActorNet
 
 ReActorNet: Reliable Actor Networking
